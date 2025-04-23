@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Emergency Room FCFS System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+  <!-- Include JsBarcode Library -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f4f4f4;
+    }
+    #page1 {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-image: url('https://images.unsplash.com/photo-1588776814546-bacb9a7212c2?auto=format&fit=crop&w=1350&q=80');
+      background-size: cover;
+      background-position: center;
+      text-align: center;
+    }
+    #page1 .box {
+      background: rgba(255, 255, 255, 0.85);
+      border: 2px solid #ddd;
+      border-radius: 15px;
+      padding: 40px 30px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+    }
+    .header-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 60px;
+      color: black;
+      text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+      animation: pulse 2s infinite;
+      margin-bottom: 10px;
+    }
+    .sub-text {
+      font-size: 22px;
+      color: black;
+      text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+      margin-bottom: 30px;
+    }
+    #getStartedBtn {
+      width: 220px;
+      font-size: 18px;
+      background-color: darkred;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #getStartedBtn:hover {
+      background-color: red;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.9; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    #page2 {
+      display: none;
+      padding: 20px;
+    }
+    .box {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px auto;
+      box-shadow: 0 0 10px #ccc;
+      max-width: 600px;
+    }
+    input, select, button {
+      padding: 10px;
+      margin: 5px 0 15px 0;
+      width: 100%;
+    }
+    button {
+      background-color: darkred;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: red;
+    }
+    .receipt {
+      background: #eee;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 15px;
+    }
+    label {
+      font-weight: bold;
+    }
+    label:before {
+      content: "📝 ";
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Page 1 -->
+  <div id="page1">
+    <div class="box">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/2/20/Adidas_Logo.svg" width="80" alt="Adidas Logo">
+      <div class="header-title">🏥 Welcome to Udongnalami Hospital</div>
+      <div class="sub-text">Manage emergency patients efficiently and with care.</div>
+      <button id="getStartedBtn" onclick="goToSystem()">Get Started</button>
+    </div>
+  </div>
+
+  <!-- Page 2 -->
+  <div id="page2">
+    <div class="box">
+      <h2>Emergency Room FCFS System</h2>
+      <label>Customer's Last Name:</label><input type="text" id="lastName">
+      <label>Customer's First Name:</label><input type="text" id="firstName">
+      <label>Customer's Middle Initial:</label><input type="text" id="middleInitial">
+      <label>Customer's Address:</label><input type="text" id="address">
+      <label>Customer's Email:</label><input type="email" id="email">
+      <label>Customer's Phone Number:</label><input type="text" id="phone">
+      <label>Admission Date:</label><input type="date" id="date">
+      <label>Condition:</label>
+      <select id="conditionSelect" onchange="toggleOtherCondition()">
+        <option value="shot in the head">Shot in the Head</option>
+        <option value="heart attack">Heart Attack</option>
+        <option value="heatstroke">Heatstroke</option>
+        <option value="animal bite">Animal Bite</option>
+        <option value="other">Other</option>
+      </select>
+      <div id="otherConditionDiv" style="display:none;">
+        <label>Other Condition:</label><input type="text" id="otherCondition">
+      </div>
+      <button onclick="addPatient()">Add Patient</button>
+    </div>
+
+    <div class="box">
+      <h3>🧾 Waiting Queue</h3>
+      <ul id="queueList"></ul>
+    </div>
+
+    <div class="box">
+      <h3>🚑 Next Patient</h3>
+      <button onclick="servePatient()">Serve (Next)</button>
+      <div id="receipt" class="receipt"></div>
+      <button onclick="printReceipt()">Print Receipt</button>
+    </div>
+  </div>
+
+  <script>
+    const queue = [], conditions = [], bills = [];
+    const addresses = [], emails = [], phones = [], admissionDates = [];
+    let front = 0;
+
+    function goToSystem() {
+      document.getElementById("page1").style.display = "none";
+      document.getElementById("page2").style.display = "block";
+    }
+
+    function toggleOtherCondition() {
+      const conditionSelect = document.getElementById("conditionSelect").value;
+      document.getElementById("otherConditionDiv").style.display = conditionSelect === "other" ? "block" : "none";
+    }
+
+    function addPatient() {
+      const lastName = document.getElementById("lastName").value.trim();
+      const firstName = document.getElementById("firstName").value.trim();
+      const middleInitial = document.getElementById("middleInitial").value.trim();
+      const address = document.getElementById("address").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const date = document.getElementById("date").value;
+      let condition = document.getElementById("conditionSelect").value;
+      const otherCondition = document.getElementById("otherCondition").value.trim();
+
+      if (condition === "other" && otherCondition) condition = otherCondition;
+      else if (condition === "other") return alert("Please specify the other condition.");
+
+      const fullName = `${firstName} ${middleInitial}. ${lastName}`;
+      let fee = 2000;
+      const lc = condition.toLowerCase();
+      if (lc.includes("shot in the head")) fee = 5000;
+      else if (lc.includes("heart attack")) fee = 3000;
+      else if (lc.includes("heatstroke")) fee = 4000;
+      else if (lc.includes("animal bite")) fee = 2500;
+
+      queue.push(fullName);
+      conditions.push(condition);
+      bills.push(fee);
+      addresses.push(address);
+      emails.push(email);
+      phones.push(phone);
+      admissionDates.push(date);
+
+      updateQueueList();
+      alert(`Patient ${fullName} added with condition: ${condition}`);
+      document.querySelectorAll('input').forEach(i => i.value = '');
+    }
+
+    function updateQueueList() {
+      const list = document.getElementById("queueList");
+      list.innerHTML = "";
+      for (let i = front; i < queue.length; i++) {
+        const li = document.createElement("li");
+        li.textContent = `${i - front + 1}. ${queue[i]} - ${conditions[i]} - ₱${bills[i]}`;
+        list.appendChild(li);
+      }
+    }
+
+    function servePatient() {
+      const r = document.getElementById("receipt");
+      if (front >= queue.length) return r.innerHTML = "<strong>No patients in the queue.</strong>";
+
+      const name = queue[front];
+      const cond = conditions[front];
+      const fee = bills[front];
+      const misc = 250;
+      const total = fee + misc;
+      const date = admissionDates[front];
+      const address = addresses[front];
+      const email = emails[front];
+      const phone = phones[front];
+
+      r.innerHTML = `
+        <div style="border: 2px solid black; padding: 20px; background: white; font-family: Arial, sans-serif;">
+          <div style="text-align: center;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/2/20/Adidas_Logo.svg" width="60">
+            <h2>Udongnalami Hospital</h2>
+            <p>123 Udong Ave, Adidas City | Tel: (123) 456-7890</p>
+            <hr>
+          </div>
+          <table style="width: 100%; margin-bottom: 10px;">
+            <tr>
+              <td style="text-align: left;"><strong>${name}</strong></td>
+              <td style="text-align: right;"><strong>${date}</strong></td>
+            </tr>
+          </table>
+          <div style="line-height: 1.8;">
+            <strong>Patient's Name:</strong> ${name}<br>
+            <strong>Address:</strong> ${address}<br>
+            <strong>Email:</strong> ${email}<br>
+            <strong>Phone Number:</strong> ${phone}<br>
+            <strong>Medical Condition:</strong> ${cond}<br>
+            <strong>Service Fee:</strong> ₱${fee}<br>
+            <strong>Miscellaneous Fee:</strong> ₱${misc}<br>
+            <strong>Total Bill:</strong> ₱${total}<br>
+          </div>
+          <hr style="margin: 20px 0;">
+          <div style="text-align: right;"><strong>Doctor:</strong> Dr. Marissa G. Flores</div>
+          <div style="text-align: center; margin-top: 20px;">
+            <svg id="barcode"></svg>
+          </div>
+        </div>
+      `;
+
+      // Generate barcode for the patient's ID (e.g., a random number for now)
+      const patientId = Math.floor(Math.random() * 1000000000).toString();  // Simple random patient ID
+      JsBarcode("#barcode", patientId, { format: "CODE128" });
+
+      front++;
+      updateQueueList();
+    }
+
+    function printReceipt() {
+      const receiptContent = document.getElementById("receipt").innerHTML;
+      const originalContent = document.body.innerHTML;
+      document.body.innerHTML = `<div style="padding:20px;">${receiptContent}</div>`;
+      window.print();
+      document.body.innerHTML = originalContent;
+      location.reload();
+    }
+  </script>
+</body>
+</html>
